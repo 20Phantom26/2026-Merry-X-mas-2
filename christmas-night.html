@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>聖誕奇蹟之夜 🎄</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #020817; font-family: Georgia, "Noto Serif TC", serif; }
+    canvas { display: block; }
+    #hint { position: fixed; z-index: 2; bottom: 20px; width: 100%; padding: 0 12px; text-align: center; color: #f3dfb2; font-size: 13px; letter-spacing: 2px; text-shadow: 0 1px 8px #000; pointer-events: none; }
+    #title { position: fixed; top: 24px; width: 100%; z-index: 2; text-align: center; color: #f8e8bb; font-size: clamp(20px, 4vw, 36px); letter-spacing: 6px; text-shadow: 0 0 24px #e9c875; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <div id="title">MERRY CHRISTMAS</div>
+  <div id="hint">聖誕老公公正在送禮物 ✦ 點擊畫面召喚更多禮物</div>
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x020817);
+    scene.fog = new THREE.FogExp2(0x07152a, 0.012);
+    const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.1, 150);
+    camera.position.set(0, 8, 25);
+    camera.lookAt(0, 7, 0);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    document.body.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0x9aaccb, 1.2));
+    const moon = new THREE.DirectionalLight(0xc5d8ff, 2.4);
+    moon.position.set(-8, 16, 10);
+    scene.add(moon);
+    const warm = new THREE.PointLight(0xffbd59, 90, 30);
+    warm.position.set(0, 8, 3);
+    scene.add(warm);
+
+    // 背景星空
+    const starPositions = [];
+    for (let i = 0; i < 1600; i++) starPositions.push((Math.random() - .5) * 90, Math.random() * 48, -18 - Math.random() * 30);
+    const starGeometry = new THREE.BufferGeometry();
+    starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
+    scene.add(new THREE.Points(starGeometry, new THREE.PointsMaterial({ color: 0xffedc2, size: .13, transparent: true, opacity: .9 })));
+
+    // 飄雪
+    const snowCount = 1000;
+    const snowPositions = new Float32Array(snowCount * 3);
+    for (let i = 0; i < snowCount; i++) {
+      snowPositions[i * 3] = (Math.random() - .5) * 42;
+      snowPositions[i * 3 + 1] = Math.random() * 32;
+      snowPositions[i * 3 + 2] = (Math.random() - .5) * 24;
+    }
+    const snowGeometry = new THREE.BufferGeometry();
+    snowGeometry.setAttribute('position', new THREE.BufferAttribute(snowPositions, 3));
+    scene.add(new THREE.Points(snowGeometry, new THREE.PointsMaterial({ color: 0xe4efff, size: .12, transparent: true, opacity: .8 })));
+
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(35, 80), new THREE.MeshStandardMaterial({ color: 0x10243a, roughness: .95 }));
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -.12;
+    ground.position.z = -2;
+    scene.add(ground);
+
+    // 聖誕樹
+    const tree = new THREE.Group();
+    scene.add(tree);
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.25, .38, 2, 10), new THREE.MeshStandardMaterial({ color: 0x604126 }));
+    trunk.position.y = 1;
+    tree.add(trunk);
+    for (let i = 0; i < 5; i++) {
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(4.3 - i * .72, 2.8, 12), new THREE.MeshStandardMaterial({ color: i % 2 ? 0x145033 : 0x0d402b, roughness: .9 }));
+      cone.position.y = 2.2 + i * 1.45;
+      tree.add(cone);
+    }
+    const bulbs = [];
+    const colors = [0xffd37b, 0xfff0c5, 0xe6404c, 0x8bb8ff];
+    for (let i = 0; i < 110; i++) {
+      const t = Math.random();
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 3.9 * (1 - t * .88);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(.085, 10, 10), new THREE.MeshBasicMaterial({ color: colors[i % colors.length] }));
+      bulb.position.set(Math.cos(angle) * radius, 1.3 + t * 7.2, Math.sin(angle) * radius);
+      tree.add(bulb);
+      bulbs.push(bulb);
+    }
+    const topStar = new THREE.Mesh(new THREE.OctahedronGeometry(.55), new THREE.MeshStandardMaterial({ color: 0xffd36e, emissive: 0xffa51e, emissiveIntensity: 2, metalness: .55 }));
+    topStar.position.set(0, 9.3, 0);
+    tree.add(topStar);
+    const starLight = new THREE.PointLight(0xffc550, 35, 8);
+    starLight.position.copy(topStar.position);
+    tree.add(starLight);
+
+    const giftColors = [[0xb51f2d, 0xf0cd75], [0x1d4e78, 0xffe6aa], [0x1c653d, 0xd8b45d], [0x842544, 0xf2d18a]];
+    function makeGift(scale = 1) {
+      const [boxColor, ribbonColor] = giftColors[Math.floor(Math.random() * giftColors.length)];
+      const group = new THREE.Group();
+      const box = new THREE.Mesh(new THREE.BoxGeometry(.8, .65, .75), new THREE.MeshStandardMaterial({ color: boxColor, metalness: .18, roughness: .38 }));
+      group.add(box);
+      const ribbonMat = new THREE.MeshStandardMaterial({ color: ribbonColor, metalness: .55, roughness: .27 });
+      const ribbonA = new THREE.Mesh(new THREE.BoxGeometry(.13, .68, .77), ribbonMat);
+      const ribbonB = new THREE.Mesh(new THREE.BoxGeometry(.82, .68, .13), ribbonMat);
+      group.add(ribbonA, ribbonB);
+      const bow = new THREE.Mesh(new THREE.TorusGeometry(.14, .035, 8, 14), ribbonMat);
+      bow.position.y = .38;
+      group.add(bow);
+      group.scale.setScalar(scale);
+      return group;
+    }
+
+    // 樹下已送達的禮物
+    const landedGifts = [];
+    for (let i = 0; i < 8; i++) {
+      const gift = makeGift(.65 + Math.random() * .28);
+      gift.position.set((Math.random() - .5) * 7, .35, (Math.random() - .5) * 4);
+      gift.rotation.y = Math.random() * Math.PI;
+      scene.add(gift);
+      landedGifts.push(gift);
+    }
+
+    // 從天空落下並在地面停住的禮物
+    const fallingGifts = [];
+    function dropGift(x = (Math.random() - .5) * 8) {
+      const gift = makeGift(.62 + Math.random() * .35);
+      gift.position.set(x, 17 + Math.random() * 5, (Math.random() - .5) * 4);
+      gift.rotation.set(Math.random() * .3, Math.random() * Math.PI, Math.random() * .3);
+      scene.add(gift);
+      fallingGifts.push({ object: gift, velocity: 0, spin: (Math.random() - .5) * 2, landed: false });
+    }
+    for (let i = 0; i < 5; i++) setTimeout(() => dropGift(), 900 + i * 650);
+
+    // Santa + sleigh, deliberately kept in the visible upper sky
+    function makeSanta() {
+      const santa = new THREE.Group();
+      const red = new THREE.MeshStandardMaterial({ color: 0xb51d2d, roughness: .8 });
+      const fur = new THREE.MeshStandardMaterial({ color: 0xf4eadc, roughness: 1 });
+      const skin = new THREE.MeshStandardMaterial({ color: 0xdca77d });
+      function ellipsoid(material, x, y, z, sx, sy, sz) {
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 14), material);
+        mesh.position.set(x, y, z);
+        mesh.scale.set(sx, sy, sz);
+        santa.add(mesh);
+        return mesh;
+      }
+      ellipsoid(red, 0, 0, 0, .48, .62, .38);
+      ellipsoid(fur, 0, -.48, 0, .48, .1, .39);
+      ellipsoid(skin, 0, .77, 0, .34, .34, .31);
+      ellipsoid(fur, 0, .54, .1, .3, .25, .28);
+      ellipsoid(fur, 0, 1.04, 0, .37, .08, .34);
+      ellipsoid(red, 0, 1.27, 0, .2, .27, .2);
+      ellipsoid(fur, .17, 1.48, 0, .11, .11, .11);
+      return santa;
+    }
+    const sleigh = new THREE.Group();
+    const sleighRed = new THREE.MeshStandardMaterial({ color: 0x9d1828, metalness: .3, roughness: .35 });
+    const gold = new THREE.MeshStandardMaterial({ color: 0xe2b85f, metalness: .75, roughness: .25 });
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(2, .4, .85), sleighRed);
+    seat.position.y = -.05;
+    sleigh.add(seat);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(.2, .95, .85), sleighRed);
+    back.position.set(-.88, .43, 0);
+    sleigh.add(back);
+    for (const z of [-.38, .38]) {
+      const runner = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, 2.6, 8), gold);
+      runner.rotation.z = Math.PI / 2;
+      runner.position.set(0, -.42, z);
+      sleigh.add(runner);
+    }
+    for (let i = 0; i < 2; i++) {
+      const sackGift = makeGift(.43);
+      sackGift.position.set(-.38 + i * .48, .36, 0);
+      sleigh.add(sackGift);
+    }
+    const santa = makeSanta();
+    santa.scale.setScalar(.68);
+    santa.position.set(.35, .28, 0);
+    sleigh.add(santa);
+    sleigh.position.set(17, 11, 0);
+    scene.add(sleigh);
+
+    // 三隻簡潔的馴鹿剪影
+    const reindeer = new THREE.Group();
+    const brown = new THREE.MeshStandardMaterial({ color: 0x855536, roughness: .95 });
+    for (let i = 0; i < 3; i++) {
+      const deer = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.SphereGeometry(.45, 12, 10), brown);
+      body.scale.set(1.35, .72, .72);
+      deer.add(body);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(.24, 12, 10), brown);
+      head.position.set(.45, .42, 0);
+      deer.add(head);
+      for (const z of [-.14, .14]) {
+        const antler = new THREE.Mesh(new THREE.CylinderGeometry(.025, .04, .42, 6), gold);
+        antler.position.set(.43, .73, z);
+        antler.rotation.z = -.35;
+        deer.add(antler);
+      }
+      deer.position.set(2 + i * 1.05, 0, i % 2 ? .18 : -.18);
+      deer.scale.setScalar(.62);
+      reindeer.add(deer);
+    }
+    reindeer.position.set(15, 10.7, 0);
+    scene.add(reindeer);
+
+    let elapsed = 0;
+    let giftTimer = 0;
+    let extraGiftRain = false;
+    addEventListener('pointerdown', () => { extraGiftRain = true; });
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), .05);
+      elapsed += dt;
+      giftTimer += dt;
+      // Make Santa and the reindeer continuously cross the scene, then return for another pass.
+      const flight = (elapsed * .085) % 1;
+      const flightX = 18 - flight * 38;
+      const bob = Math.sin(elapsed * 2.8) * .22;
+      sleigh.position.set(flightX, 10.8 + bob, 0);
+      reindeer.position.set(flightX + 2.8, 10.5 + bob, 0);
+      sleigh.rotation.z = Math.sin(elapsed * 2.8) * .025;
+      tree.rotation.y += dt * .08;
+      topStar.rotation.y += dt * .55;
+      bulbs.forEach((bulb, i) => { bulb.material.opacity = .68 + Math.sin(elapsed * 3 + i) * .28; bulb.material.transparent = true; });
+
+      // Automatic delivery is always active; clicking adds a short burst of presents.
+      const interval = extraGiftRain ? .28 : 1.45;
+      if (giftTimer > interval) {
+        giftTimer = 0;
+        dropGift((Math.random() - .5) * 7);
+        if (extraGiftRain && Math.random() > .55) dropGift((Math.random() - .5) * 7);
+        if (extraGiftRain) setTimeout(() => { extraGiftRain = false; }, 5000);
+      }
+      for (let i = fallingGifts.length - 1; i >= 0; i--) {
+        const item = fallingGifts[i];
+        if (!item.landed) {
+          item.velocity += 11 * dt;
+          item.object.position.y -= item.velocity * dt;
+          item.object.rotation.y += item.spin * dt;
+          item.object.rotation.x += item.spin * .35 * dt;
+          if (item.object.position.y <= .38) {
+            item.object.position.y = .38;
+            item.velocity = 0;
+            item.landed = true;
+            landedGifts.push(item.object);
+            if (landedGifts.length > 28) scene.remove(landedGifts.shift());
+          }
+        }
+      }
+      const positions = snowGeometry.attributes.position.array;
+      for (let i = 0; i < snowCount; i++) {
+        const idx = i * 3;
+        positions[idx + 1] -= dt * (1.1 + (i % 5) * .16);
+        positions[idx] += Math.sin(elapsed + i) * dt * .16;
+        if (positions[idx + 1] < -.5) positions[idx + 1] = 30;
+      }
+      snowGeometry.attributes.position.needsUpdate = true;
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+  </script>
+</body>
+</html>
